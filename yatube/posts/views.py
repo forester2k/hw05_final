@@ -1,7 +1,6 @@
 # posts/views.py
-from genericpath import exists
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.cache import cache_page
+# from django.views.decorators.cache import cache_page
 from django.shortcuts import redirect, render, get_object_or_404
 
 from core.diffs import page_cuter
@@ -30,7 +29,7 @@ def group_posts(request, slug):
 
 def profile(request, username):
     author = get_object_or_404(User, username=username)
-    user=request.user
+    user = request.user
     following = False
     can_following = False
     if user.is_authenticated:
@@ -124,6 +123,7 @@ def follow_index(request):
     }
     return render(request, 'posts/follow.html', context)
 
+
 @login_required
 def profile_follow(request, username):
     # Подписаться на автора
@@ -136,6 +136,7 @@ def profile_follow(request, username):
                 author=following
             )
     return redirect('posts:profile', username=following)
+
 
 @login_required
 def profile_unfollow(request, username):

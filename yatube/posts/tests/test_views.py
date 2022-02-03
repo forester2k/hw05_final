@@ -1,7 +1,7 @@
 # posts/tests/tests_views.py
 import shutil
 import tempfile
-from time import sleep
+# from time import sleep
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -27,7 +27,7 @@ class PostsUrlTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        small_gif = (            
+        small_gif = (
             b'\x47\x49\x46\x38\x39\x61\x02\x00'
             b'\x01\x00\x80\x00\x00\x00\x00\x00'
             b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
@@ -76,9 +76,9 @@ class PostsUrlTests(TestCase):
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
-        # Модуль shutil - библиотека Python с удобными инструментами 
-        # для управления файлами и директориями: 
-        # создание, удаление, копирование, перемещение, изменение папок и файлов
+        # Модуль shutil - библиотека Python с удобными инструментами
+        # для управления файлами и директориями: создание, удаление,
+        # копирование, перемещение, изменение папок и файлов
         # Метод shutil.rmtree удаляет директорию и всё её содержимое
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
@@ -329,16 +329,16 @@ class PostsUrlTests(TestCase):
     # на других пользователей и удалять их из подписок.
     def test_user_following_and_unfolowwing(self):
         """Авторизованный пользователь может подписываться."""
-        self.authorized_client.get(
-            reverse('posts:profile_follow', kwargs={'username': self.other_user})
+        self.authorized_client.get(reverse(
+            'posts:profile_follow', kwargs={'username': self.other_user})
         )
         is_follow = Follow.objects.filter(
             user=self.user,
             author=self.other_user
         ).exists()
         self.assertTrue(is_follow)
-        self.authorized_client.get(
-            reverse('posts:profile_unfollow', kwargs={'username': self.other_user})
+        self.authorized_client.get(reverse(
+            'posts:profile_unfollow', kwargs={'username': self.other_user})
         )
         is_follow = Follow.objects.filter(
             user=self.user,
@@ -346,13 +346,13 @@ class PostsUrlTests(TestCase):
         ).exists()
         self.assertFalse(is_follow)
 
-    # Новая запись пользователя появляется в ленте тех, 
+    # Новая запись пользователя появляется в ленте тех,
     # кто на него подписан и не появляется в ленте тех, кто не подписан.
     def test_post_only_for_followers(self):
         """Новый пост в подписке только у подписавшихся."""
         # Подписываем user на other_user
-        self.authorized_client.get(
-            reverse('posts:profile_follow', kwargs={'username': self.other_user})
+        self.authorized_client.get(reverse(
+            'posts:profile_follow', kwargs={'username': self.other_user})
         )
         # other_user создает пост
         self.user_post_for_following = Post.objects.create(
@@ -377,11 +377,10 @@ class PostsUrlTests(TestCase):
         self.assertNotEqual(first_object, last_post)
         # Подчищаем за собой
         self.authorized_client.get(reverse(
-            'posts:profile_unfollow', 
+            'posts:profile_unfollow',
             kwargs={'username': self.other_user})
         )
         Post.objects.filter(id=self.user_post_for_following.id).delete()
         Post.objects.filter(
             id=self.other_user_post_for_not_following.id
         ).delete()
-        

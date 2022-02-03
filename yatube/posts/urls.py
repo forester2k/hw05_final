@@ -26,11 +26,11 @@ urlpatterns = [
         name='add_comment'
     ),
     # Лента авторов, на которые подписан пользователь
-    path('follow/', views.follow_index, name='follow_index'),    
+    path('follow/', views.follow_index, name='follow_index'),
     # Подписка на автора
     path(
         'profile/<str:username>/follow/',
-        views.profile_follow, 
+        views.profile_follow,
         name='profile_follow'
     ),
     # Отписка от автора

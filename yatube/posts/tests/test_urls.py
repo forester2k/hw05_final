@@ -53,12 +53,12 @@ class PostsUrlTests(TestCase):
                 response = self.guest_client.get(url)
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
-
     # Проверяем доступ к несуществующей странице
     def test_not_existing_page(self):
         """Страница /unexisting_page/ недоступна никому"""
         response = self.guest_client.get('/unexisting_page/')
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
+        self.assertTemplateUsed(response, 'core/404.html')
 
     # Проверяем доступ к странице /create/
     def test_create_page(self):
