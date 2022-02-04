@@ -66,6 +66,12 @@ class PostsUrlTests(TestCase):
         response = self.authorized_client.get('/create/')
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
+    # Проверяем доступ к странице /follow/
+    def test_follow_page(self):
+        """Страница /follow/ доступна авторизованному пользователю"""
+        response = self.authorized_client.get('/follow/')
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
     # Проверяем доступ автора к странице /posts/<post_id>/edit/
     def test_edit_page(self):
         """Страница /posts/<post_id>/edit/ доступна автору"""
@@ -79,6 +85,7 @@ class PostsUrlTests(TestCase):
         post_id = Post.objects.filter(author=self.user)[0].id
         templates_url_names = {
             reverse('posts:index'): 'posts/index.html',
+            reverse('posts:follow_index'): 'posts/follow.html',
             (
                 reverse('posts:group_posts', kwargs={'slug': self.group.slug})
             ): 'posts/group_list.html',

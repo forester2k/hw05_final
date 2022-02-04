@@ -49,9 +49,9 @@ class Post(models.Model):
     # в которую будут загружаться пользовательские файлы.
 
     class Meta:
-        ordering = ['-pub_date']
+        # ordering = ['-pub_date']
         # Если что-то пойдет не так, поменять ордеринг на закомментированный
-        # ordering = ['-pub_date', '-pk']
+        ordering = ['-pub_date', '-pk']
         verbose_name = 'Пост'
         verbose_name_plural = 'Посты'
 
@@ -65,16 +65,16 @@ class Comment(models.Model):
         Post,
         on_delete=models.CASCADE,
         related_name='comments',
-        verbose_name='Комментарий',
+        verbose_name='Текст Поста',
     )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='comments',
-        verbose_name='Автор',
+        verbose_name='Автор комментария',
     )
     text = models.TextField(
-        verbose_name='Text',
+        verbose_name='Текст комментария ',
         help_text='Текст нового поста'
     )
     created = models.DateTimeField(
@@ -94,3 +94,11 @@ class Follow(models.Model):
         on_delete=models.CASCADE,
         related_name='following',
     )
+
+
+    class Meta:
+            constraints = [
+                models.UniqueConstraint(
+                    fields=['user', 'author'], name='unique_follow'
+                ),
+            ]

@@ -34,12 +34,16 @@ def profile(request, username):
     can_following = False
     if user.is_authenticated:
         following = Follow.objects.filter(user=user, author=author).exists()
+        can_following = (user != author) and (
+            not Follow.objects.filter(user=user, author=author).exists()
+        )
     post_list = author.posts.all()
     context = {
         'page_obj': page_cuter(request, post_list),
         'page_count': post_list.count(),
         'author': author,
         'following': following,
+        'can_following': can_following
     }
     return render(request, 'posts/profile.html', context)
 
@@ -107,8 +111,13 @@ def add_comment(request, post_id):
 
 @login_required
 def follow_index(request):
+    # информация о текущем пользователе доступна в переменной request.user
+    # ...
+    # authors = Follow.author.filter(user=request.user)
     follow_list = request.user.follower.all()
     post_list = Post.objects.filter(author__in=follow_list.values('author'))
+    # post_list = Post.objects.filter(author=request.user)
+    # post_list = Post.objects.filter(author=authors)
     context = {
         'page_obj': page_cuter(request, post_list),
     }

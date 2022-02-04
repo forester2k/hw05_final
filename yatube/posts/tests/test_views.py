@@ -1,10 +1,10 @@
 # posts/tests/tests_views.py
 import shutil
 import tempfile
-# from time import sleep
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
@@ -161,12 +161,20 @@ class PostsUrlTests(TestCase):
     # в первом элементе списка page_obj содержит ожидаемые значения
     def test_group_list_page_show_correct_context(self):
         """Шаблон /group/<slug>/ сформирован с правильным контекстом."""
-        response = self.authorized_client.get(
-            reverse('posts:group_posts', kwargs={'slug': self.group_1.slug})
+        group_3 = Group.objects.create(
+            title='Тестовая группа 3',
+            slug='Test_slug_3',
+            description='Тестовое описание 3',
         )
-        using_group = Group.objects.get(slug=self.group_1.slug)
-        last_post = Post.objects.filter(group=using_group)[0]
-        self._check_context(response, last_post)
+        new_post = Post.objects.create(
+            author=self.other_user,
+            group=group_3,
+            text='Проверки группы пост...',
+        )
+        response = self.authorized_client.get(
+            reverse('posts:group_posts', kwargs={'slug': group_3.slug})
+        )
+        self._check_context(response, new_post)
 
     def test_group_first_page_contains_ten_records(self):
         """Первая страница /group/<slug>/
@@ -227,9 +235,9 @@ class PostsUrlTests(TestCase):
     def test_profile_page_show_correct_context(self):
         """Шаблон profile/<username>/ сформирован с правильным контекстом."""
         response = self.authorized_client.get(
-            reverse('posts:profile', kwargs={'username': self.user})
+            reverse('posts:profile', kwargs={'username': self.other_user})
         )
-        using_author = User.objects.get(username=self.user)
+        using_author = User.objects.get(username=self.other_user)
         last_post = Post.objects.filter(author=using_author)[0]
         posts_count = Post.objects.filter(author=using_author).count()
         self._check_context(response, last_post)
@@ -300,43 +308,50 @@ class PostsUrlTests(TestCase):
     # Проверяем кеширование
     def test_index_cache(self):
         """Главная страница кешируется"""
+        # Смотрим на страницу
         response = self.authorized_client.get(reverse('posts:index'))
-        last_post = Post.objects.all()[0]
         content_1 = response.content
-        last_post.text = 'Чуток поменяли' + last_post.text
-        last_post.save()
-        # Проверяем, что главная страница не изменилась
+        # Создаем пост
+        self.post_for_cash = Post.objects.create(
+            author=self.user,
+            group=self.group_1,
+            text='Пост для проверки кеша...',
+        )
+        # Смотрим на страницу, там не должно ничего измениться
         response = self.authorized_client.get(reverse('posts:index'))
         content_2 = response.content
         self.assertEqual(content_1, content_2)
-        # sleep(5)
-        # print('5')
-        # sleep(5)
-        # print('10')
-        # sleep(5)
-        # print('15')
-        # sleep(5)
-        # print('20')
-        # sleep(5)
-        # print('25')
-        # # Проверяем, что главная страница изменилась после обновления кеша
-        # response = self.authorized_client.get(reverse('posts:index'))
-        # content_2 = response.content
-        # self.assertNotEqual(content_1, content_2)
-        # ==================================================
+        # Чистим кеш
+        cache.clear()
+        # Смотрим на страницу, она должна измениться
+        response = self.authorized_client.get(reverse('posts:index'))
+        content_3 = response.content
+        self.assertNotEqual(content_1, content_3)
+        # Убираем за собой
+        self.post_for_cash.delete()
 
     # Авторизованный пользователь может подписываться
-    # на других пользователей и удалять их из подписок.
-    def test_user_following_and_unfolowwing(self):
+    # на других пользователей.
+    def test_user_following(self):
         """Авторизованный пользователь может подписываться."""
         self.authorized_client.get(reverse(
             'posts:profile_follow', kwargs={'username': self.other_user})
         )
-        is_follow = Follow.objects.filter(
+        follow = Follow.objects.filter(
             user=self.user,
             author=self.other_user
-        ).exists()
-        self.assertTrue(is_follow)
+        )
+        self.assertTrue(follow.exists())
+        follow.delete()
+
+    # Авторизованный пользователь может отписываться
+    # от других пользователей.
+    def test_user_unfolowing(self):
+        """Авторизованный пользователь может отписываться."""
+        Follow.objects.create(
+            user=self.user,
+            author=self.other_user
+        )
         self.authorized_client.get(reverse(
             'posts:profile_unfollow', kwargs={'username': self.other_user})
         )
@@ -347,40 +362,43 @@ class PostsUrlTests(TestCase):
         self.assertFalse(is_follow)
 
     # Новая запись пользователя появляется в ленте тех,
-    # кто на него подписан и не появляется в ленте тех, кто не подписан.
-    def test_post_only_for_followers(self):
-        """Новый пост в подписке только у подписавшихся."""
-        # Подписываем user на other_user
-        self.authorized_client.get(reverse(
-            'posts:profile_follow', kwargs={'username': self.other_user})
+    # кто на него подписан.
+    def test_folower_see_new_post(self):
+        """Новый пост виден в ленте у подписчика."""
+        # Создаем свежего юзера
+        fresh_user = User.objects.create_user(username='IamFresh')
+        fresh_author = User.objects.create_user(username='IamFreshAuthor')
+        # Создаем подписку
+        Follow.objects.create(user=fresh_user, author=fresh_author)
+        # Создаем пост
+        new_post = Post.objects.create(
+            author=fresh_author,
+            group=self.group_1,
+            text='Подписки проверки пост...',
         )
-        # other_user создает пост
-        self.user_post_for_following = Post.objects.create(
+        # Запрашиваем ленту
+        self.authorized_fresh = Client()
+        self.authorized_fresh.force_login(fresh_user)
+        response = self.authorized_fresh.get(reverse('posts:follow_index'))
+        # Проверяем соответствие контекста
+        self._check_context(response, new_post)
+        new_post.delete()
+
+    # Новая запись пользователя не появляется в ленте тех,
+    # кто на него не подписан.
+    def test_unfolower_dont_see_new_post(self):
+        """Новый пост не виден в ленте у неподписавшегося."""
+        # Создаем свежего юзера
+        fresh_user_too = User.objects.create_user(username='IamFreshToo')
+        # Создаем пост
+        new_post = Post.objects.create(
             author=self.other_user,
             group=self.group_1,
-            text='+-Тестовый текст, виден follower...',
+            text='Не подписки проверки пост...',
         )
-        # user получает пост в контекст своей ленты
-        response = self.authorized_client.get(reverse('posts:follow_index'))
-        last_post = Post.objects.all()[0]
-        self._check_context(response, last_post)
-        # user создает пост
-        self.other_user_post_for_not_following = Post.objects.create(
-            author=self.user,
-            group=self.group_1,
-            text='-+Тестовый текст, не виден если не follower...',
-        )
-        # user не получает пост в контекст своей ленты
-        response = self.authorized_client.get(reverse('posts:follow_index'))
-        last_post = Post.objects.all()[0]
-        first_object = response.context['page_obj'][0]
-        self.assertNotEqual(first_object, last_post)
-        # Подчищаем за собой
-        self.authorized_client.get(reverse(
-            'posts:profile_unfollow',
-            kwargs={'username': self.other_user})
-        )
-        Post.objects.filter(id=self.user_post_for_following.id).delete()
-        Post.objects.filter(
-            id=self.other_user_post_for_not_following.id
-        ).delete()
+        # Запрашиваем ленту
+        self.authorized_fresh_too = Client()
+        self.authorized_fresh_too.force_login(fresh_user_too)
+        response = self.authorized_fresh_too.get(reverse('posts:follow_index'))
+        self.assertEqual(response.context['page_obj'].paginator.count, 0)
+        new_post.delete()
