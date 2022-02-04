@@ -312,7 +312,7 @@ class PostsUrlTests(TestCase):
         response = self.authorized_client.get(reverse('posts:index'))
         content_1 = response.content
         # Создаем пост
-        self.post_for_cash = Post.objects.create(
+        self.post_for_cach = Post.objects.create(
             author=self.user,
             group=self.group_1,
             text='Пост для проверки кеша...',
@@ -328,20 +328,26 @@ class PostsUrlTests(TestCase):
         content_3 = response.content
         self.assertNotEqual(content_1, content_3)
         # Убираем за собой
-        self.post_for_cash.delete()
+        self.post_for_cach.delete()
 
     # Авторизованный пользователь может подписываться
     # на других пользователей.
     def test_user_following(self):
         """Авторизованный пользователь может подписываться."""
+        # Подписок в базе
+        follow_count_start = Follow.objects.count()
+        # Подписка
         self.authorized_client.get(reverse(
             'posts:profile_follow', kwargs={'username': self.other_user})
         )
-        follow = Follow.objects.filter(
-            user=self.user,
-            author=self.other_user
-        )
-        self.assertTrue(follow.exists())
+        # Подписок стало
+        follow_count_end = Follow.objects.count()
+        self.assertEqual(follow_count_start + 1, follow_count_end)
+        # Достаем подписку
+        follow = Follow.objects.all()[0]
+        # Проверяем соответствие
+        self.assertEqual(self.user, follow.user)
+        self.assertEqual(self.other_user, follow.author)
         follow.delete()
 
     # Авторизованный пользователь может отписываться
