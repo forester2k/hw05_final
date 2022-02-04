@@ -31,7 +31,6 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     user = request.user
     following = False
-    can_following = False
     if user.is_authenticated:
         following = Follow.objects.filter(user=user, author=author).exists()
     post_list = author.posts.all()
@@ -122,8 +121,8 @@ def profile_follow(request, username):
     following = get_object_or_404(User, username=username)
     if follower != following:
         Follow.objects.get_or_create(
-                user=follower,
-                author=following
+            user=follower,
+            author=following
         )
     return redirect('posts:profile', username=following)
 
