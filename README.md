@@ -8,7 +8,7 @@
 
 ### Технологический стек
 
-Python 3.7
+Python 3.7 /n
 Django==2.2
 Pillow==8.3
 pytest==6.2
