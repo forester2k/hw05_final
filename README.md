@@ -8,13 +8,11 @@
 
 ### Технологический стек
 
-Python 3.7 
-Django==2.2 
-Pillow==8.3
-
-pytest==6.2
-
-requests==2.26
+- Python 3.7 
+- Django==2.2 
+- Pillow==8.3
+- pytest==6.2
+- requests==2.26
 
 ### Как запустить проект.
 
